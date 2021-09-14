@@ -13,6 +13,14 @@ public class CSRFRequestMatcher implements RequestMatcher {
         boolean match =
                 httpServletRequest.getRequestURI().equals("/login") && httpServletRequest.getMethod()
                         .toLowerCase().equals("post");
+        if (match) {
+            return match;
+        }
+
+        match = httpServletRequest.getRequestURI().equals("/logout") && httpServletRequest.getMethod()
+                        .toLowerCase().equals("post");
+        // ...
+
         return match;
     }
 }
