@@ -12,7 +12,7 @@ import org.springframework.security.core.context.SecurityContext;
  */
 public class SessionManager {
 
-    // 假设作为分布式session
+    // TODO 假设作为分布式session
     private static Map<String, CustomSession> cache = new ConcurrentHashMap<>();
 
     /**

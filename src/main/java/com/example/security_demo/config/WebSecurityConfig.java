@@ -1,7 +1,6 @@
 package com.example.security_demo.config;
 
-import javax.servlet.http.HttpServletRequest;
-
+import com.example.security_demo.config.bean.CSRFRequestMatcher;
 import com.example.security_demo.config.bean.CustomLogoutHandler;
 import com.example.security_demo.config.bean.CustomSecurityContextRepository;
 import com.example.security_demo.config.bean.authentication.CustomAuthenticationSuccessHandler;
@@ -9,19 +8,16 @@ import com.example.security_demo.config.bean.authorization.CustomAccessDecisionM
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.util.matcher.RequestMatcher;
 
 @Configuration
 @EnableWebSecurity
@@ -32,7 +28,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
      * TODO 据实际password加密方式而定
      */
     @Bean
-    public PasswordEncoder passwordEncoder(){
+    public PasswordEncoder passwordEncoder() {
         return NoOpPasswordEncoder.getInstance();
     }
 
@@ -81,29 +77,13 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .formLogin().loginPage("/login").successHandler(new CustomAuthenticationSuccessHandler()).permitAll()
                 .and()
                 // logout 自定义部分
-                .logout().logoutUrl("/logout").addLogoutHandler(new CustomLogoutHandler()).permitAll();
-
-        Customizer<CsrfConfigurer<HttpSecurity>> csrfConfigurerCustomizer = new Customizer<CsrfConfigurer<HttpSecurity>>() {
-
-            @Override
-            public void customize(CsrfConfigurer<HttpSecurity> httpSecurityCsrfConfigurer) {
-                // request 满足什么条件时，需要验证csrfToken
-                RequestMatcher requestMatcher = new RequestMatcher() {
-
-                    @Override
-                    public boolean matches(HttpServletRequest httpServletRequest) {
-                        boolean match =
-                                httpServletRequest.getRequestURI().equals("/login") && httpServletRequest.getMethod()
-                                        .toLowerCase().equals("post");
-                        return match;
-                    }
-                };
-                httpSecurityCsrfConfigurer.requireCsrfProtectionMatcher(requestMatcher).csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse());
-            }
-        };
-        http.csrf(csrfConfigurerCustomizer);
-
-        // 自定义securityContext存储的位置  例如实现分布式session
-        http.securityContext().securityContextRepository(new CustomSecurityContextRepository());
+                .logout().logoutUrl("/logout").addLogoutHandler(new CustomLogoutHandler()).permitAll()
+                .and()
+                // csrf
+                .csrf().requireCsrfProtectionMatcher(new CSRFRequestMatcher())
+                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .and()
+                // 自定义securityContext存储的位置  例如实现分布式session
+                .securityContext().securityContextRepository(new CustomSecurityContextRepository());
     }
 }
