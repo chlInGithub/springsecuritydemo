@@ -1,0 +1,5 @@
+
+
+newcsrftoken.urlParttern : /hello,/login/check
+
+websecurityconfig.csrfTokenCookieMaxAge : 1800

@@ -1,10 +1,15 @@
 package com.example.security_demo.config;
 
+import javax.annotation.Resource;
+
 import com.example.security_demo.config.bean.CSRFRequestMatcher;
 import com.example.security_demo.config.bean.CustomLogoutHandler;
 import com.example.security_demo.config.bean.CustomSecurityContextRepository;
+import com.example.security_demo.config.bean.NewCsrfTokenFilter;
 import com.example.security_demo.config.bean.authentication.CustomAuthenticationSuccessHandler;
 import com.example.security_demo.config.bean.authorization.CustomAccessDecisionManager;
+import lombok.Setter;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -18,10 +23,22 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
 
 @Configuration
 @EnableWebSecurity
+@ConfigurationProperties("websecurityconfig")
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
+
+    /**
+     * csrfToken最大max age
+     */
+    @Setter
+    Integer csrfTokenCookieMaxAge;
+
+    @Resource
+    NewCsrfTokenFilter newCsrfTokenFilter;
 
     /**
      * 对用提交的password进行编码  以便与userdetails中password进行对比。
@@ -63,6 +80,12 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
+        CsrfTokenRepository csrfTokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        ((CookieCsrfTokenRepository)csrfTokenRepository).setCookieMaxAge(csrfTokenCookieMaxAge);
+
+        // 与csrfFilter使用同一个csrfTokenRepository
+        newCsrfTokenFilter.setCsrfTokenRepository(csrfTokenRepository);
+
         http.authorizeRequests()
                 // 首页 等其他  不需要安全验证
                 //.antMatchers("/", "/home").permitAll()
@@ -81,8 +104,10 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .and()
                 // csrf
                 .csrf().requireCsrfProtectionMatcher(new CSRFRequestMatcher())
-                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .csrfTokenRepository(csrfTokenRepository)
                 .and()
+                // 自定义个filter，针对某些url生成新的csrfToken
+                .addFilterAfter(newCsrfTokenFilter, CsrfFilter.class)
                 // 自定义securityContext存储的位置  例如实现分布式session
                 .securityContext().securityContextRepository(new CustomSecurityContextRepository());
     }
